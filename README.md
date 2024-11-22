@@ -27,7 +27,7 @@ Instructions on the install and set up
 
 ```bash
 # Clone the repository
-PS C:\Workspace> git clone https://github.com/yourusername/pbi-archive-workspace.git
+PS C:\Workspace> git clone https://github.com/zkristov/pbi-archive-workspace.git
 
 # Navigate to the project directory
 cd pbi-archive-workspace
