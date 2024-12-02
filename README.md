@@ -20,7 +20,7 @@ Step #2: Update the following `run.ps1` variables:
 | `$renameArchiveWorkspaceSuffix` | `[Archive]` | Workspace suffix value |
 | `$adminPrincpleType` | `Group` | Allowed values: [App, Group, User] |
 | `$adminIdentifier` | `null` | Allowed values: App and Group [Object ID]; User [Email address] |
-| `adminTakeOverUser ` | `null` | Email address of authenticate admin |
+| `adminTakeOverUser ` | `null` | Email address of authenticated admin |
 
 ## Installation
 Instructions on the install and set up
