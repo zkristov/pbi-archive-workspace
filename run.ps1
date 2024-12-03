@@ -96,8 +96,8 @@ try {
             }
             $ErrorActionPreference = "Stop"
         
-            # Skip datasets that are not refreshable (e.g., DirectQuery datasets)
-            if ($dataset.IsRefreshable -eq $false) {
+            # Skip datasets that are not refreshable (e.g., DirectQuery datasets, Usaage Metrics, etc.)
+            if ($dataset.IsRefreshable -eq $false -or $dataset.Name -eq "Usage Metrics Report") {
                 continue
             }
 
