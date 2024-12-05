@@ -5,13 +5,15 @@
 $renameArchiveWorkspace = $false
 $renameArchiveWorkspaceSuffix = "[Archived]"
 
-$adminPrincpleType = "Group"
-$adminIdentifier = ""
-$adminTakeOverUser = ""
+$adminPrincpleType = "User"
+$adminIdentifier = "zkristov@MngEnvMCAP594931.onmicrosoft.com"
+$adminTakeOverUser = "zkristov@MngEnvMCAP594931.onmicrosoft.com"
 
 $ErrorActionPreference = "Stop"
 $VerbosePreference = "SilentlyContinue"
 $WarningPreference = "SilentlyContinue"
+
+$sleepSeconds = 900
 
 $workspaces = @()
 
@@ -83,18 +85,28 @@ try {
             $users = Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Get | ConvertFrom-Json
             $users = $users.value
 
-            # Hack to handle when an admin user permissions are removed (on error continue)
-            $ErrorActionPreference = "SilentlyContinue"
+            # Hack to handle when the admin user permissions are attempetd to be removed (on error continue)
             foreach ($user in $users) {
                 try {
                     # Revoke access to the dataset for the user
                     Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Put -Body "{""datasetUserAccessRight"": ""None"", ""identifier"": ""$($user.identifier)"", ""principalType"": ""$($user.principalType)""}"
                 }
                 catch {
-                    continue
+                    $exception = $_.Exception
+                    if ($exception.ToString().Contains("429 (Too Many Requests)")) {
+                        Write-Log "Throttled (Revoke user access): Sleeping for $sleepSeconds seconds"
+                        Start-Sleep -Seconds $sleepSeconds
+                        
+                        Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Put -Body "{""datasetUserAccessRight"": ""None"", ""identifier"": ""$($user.identifier)"", ""principalType"": ""$($user.principalType)""}"
+                        continue
+                    }
+                    else {
+                        # Skip the user and continue
+                        continue
+                    }
                 }
+
             }
-            $ErrorActionPreference = "Stop"
         
             # Skip datasets that are not refreshable (e.g., DirectQuery datasets, Usaage Metrics, etc.)
             if ($dataset.IsRefreshable -eq $false -or $dataset.Name -eq "Usage Metrics Report") {
