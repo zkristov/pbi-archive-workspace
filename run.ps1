@@ -5,9 +5,9 @@
 $renameArchiveWorkspace = $false
 $renameArchiveWorkspaceSuffix = "[Archived]"
 
-$adminPrincpleType = "User"
-$adminIdentifier = "zkristov@MngEnvMCAP594931.onmicrosoft.com"
-$adminTakeOverUser = "zkristov@MngEnvMCAP594931.onmicrosoft.com"
+$adminPrincpleType = "Group"
+$adminIdentifier = ""
+$adminTakeOverUser = ""
 
 $ErrorActionPreference = "Stop"
 $VerbosePreference = "SilentlyContinue"
@@ -94,7 +94,7 @@ try {
                 catch {
                     $exception = $_.Exception
                     if ($exception.ToString().Contains("429 (Too Many Requests)")) {
-                        Write-Log "Throttled (Revoke user access): Sleeping for $sleepSeconds seconds"
+                        Write-Log "Throttled (Revoke user dataset access): Sleeping for $sleepSeconds seconds"
                         Start-Sleep -Seconds $sleepSeconds
                         
                         Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Put -Body "{""datasetUserAccessRight"": ""None"", ""identifier"": ""$($user.identifier)"", ""principalType"": ""$($user.principalType)""}"
