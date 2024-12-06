@@ -13,6 +13,7 @@ $ErrorActionPreference = "Stop"
 $VerbosePreference = "SilentlyContinue"
 $WarningPreference = "SilentlyContinue"
 
+# Sleep time in seconds when throttled
 $sleepSeconds = 900
 
 $workspaces = @()
@@ -93,19 +94,18 @@ try {
                 }
                 catch {
                     $exception = $_.Exception
-                    if ($exception.ToString().Contains("429 (Too Many Requests)")) {
+                    if ($exception.ToString().Contains("429 (Too Many Requests)")) {  
                         Write-Log "Throttled (Revoke user dataset access): Sleeping for $sleepSeconds seconds"
                         Start-Sleep -Seconds $sleepSeconds
-                        
+                        # retry to revoke access to the dataset for the user
                         Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Put -Body "{""datasetUserAccessRight"": ""None"", ""identifier"": ""$($user.identifier)"", ""principalType"": ""$($user.principalType)""}"
                         continue
                     }
                     else {
-                        # Skip the user and continue
+                        # exception occured (possible admin user) so skip the user
                         continue
                     }
                 }
-
             }
         
             # Skip datasets that are not refreshable (e.g., DirectQuery datasets, Usaage Metrics, etc.)
