@@ -9,14 +9,12 @@ $adminPrincpleType = "Group"
 $adminIdentifier = ""
 $adminTakeOverUser = ""
 
+$sleepSeconds = 3700
+$workspaces = @()
+
 $ErrorActionPreference = "Stop"
 $VerbosePreference = "SilentlyContinue"
 $WarningPreference = "SilentlyContinue"
-
-# Sleep time in seconds when throttled
-$sleepSeconds = 900
-
-$workspaces = @()
 
 # Logging function to output messages to console and run.log file
 function Write-Log {
@@ -24,7 +22,7 @@ function Write-Log {
         [string]$message
     )
     $message = "$(Get-Date -Format 'MM-dd-yyyy HH:mm:ss') - $message"
-    Write-Output $message
+    Write-Host $message
     Add-Content -Path ".\run.log" -Value $message
 }
 
@@ -86,6 +84,7 @@ try {
             $users = Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Get | ConvertFrom-Json
             $users = $users.value
 
+            Write-Log "Revoking access to $($users.Count) identities on dataset $($dataset.Name)"
             # Hack to handle when the admin user permissions are attempetd to be removed (on error continue)
             foreach ($user in $users) {
                 try {
@@ -94,20 +93,25 @@ try {
                 }
                 catch {
                     $exception = $_.Exception
-                    if ($exception.ToString().Contains("429 (Too Many Requests)")) {  
-                        Write-Log "Throttled (Revoke user dataset access): Sleeping for $sleepSeconds seconds"
+                    if ($exception.ToString().Contains("429")) {  
+                        Write-Log "***Throttled: Sleeping for $sleepSeconds seconds***"
                         Start-Sleep -Seconds $sleepSeconds
                         # retry to revoke access to the dataset for the user
+                        Write-Log "Waking up and retrying..."
                         Invoke-PowerBIRestMethod -Url "datasets/$($dataset.Id)/users" -Method Put -Body "{""datasetUserAccessRight"": ""None"", ""identifier"": ""$($user.identifier)"", ""principalType"": ""$($user.principalType)""}"
                         continue
                     }
-                    else {
-                        # exception occured (possible admin user) so skip the user
+                    elseif ($exception.ToString().Contains("400 (Bad Request)")) {
+                        # possible admin user, so skip to the next user
                         continue
+                    }
+                    else 
+                    {
+                        Write-Error $exception
                     }
                 }
             }
-        
+
             # Skip datasets that are not refreshable (e.g., DirectQuery datasets, Usaage Metrics, etc.)
             if ($dataset.IsRefreshable -eq $false -or $dataset.Name -eq "Usage Metrics Report") {
                 continue
@@ -121,7 +125,8 @@ try {
 
             # Disable the scheduled refresh for the dataset
             Write-Log "Disabling dataset refreshes for dataset $($dataset.Name)"
-            Invoke-PowerBIRestMethod -Url "groups/$($workspace.Id)/datasets/$($dataset.Id)/refreshSchedule" -Method Patch -Body "{""value"": {""enabled"": false }}"
+
+            Invoke-PowerBIRestMethod -Url "groups/$($workspace.Id)/datasets/$($dataset.Id)/refreshSchedule" -Method Patch -Body "{""value"": {""enabled"": false }}" 
         }
 
         # Get a list of dataflows in the workspace 
